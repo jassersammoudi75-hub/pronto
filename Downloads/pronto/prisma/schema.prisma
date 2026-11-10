@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  MERCHANT
+  COURIER
+  ADMIN
+}
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  READY
+  PICKED_UP
+  DELIVERED
+}
+
+model User {
+  id         String     @id @default(cuid())
+  name       String
+  email      String?    @unique
+  phone      String?    @unique
+  password   String?
+  role       Role       @default(CUSTOMER)
+  approved   Boolean    @default(true)
+  online     Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  stores     Store[]
+  orders     Order[]
+  deliveries Delivery[]
+}
+model Store {
+  id       String    @id @default(cuid())
+  name     String
+  category String
+  image    String
+  lat      Float
+  lng      Float
+  ownerId  String
+  owner    User      @relation(fields: [ownerId], references: [id])
+  products Product[]
+  orders   Order[]
+}
+model Product {
+  id      String @id @default(cuid())
+  name    String
+  price   Int // cents
+  image   String
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+model Order {
+  id         String      @id @default(cuid())
+  status     OrderStatus @default(PENDING)
+  total      Int
+  address    String
+  payment    String
+  lat        Float
+  lng        Float
+  createdAt  DateTime    @default(now())
+  customerId String
+  customer   User        @relation(fields: [customerId], references: [id])
+  storeId    String
+  store      Store       @relation(fields: [storeId], references: [id])
+  items      OrderItem[]
+  delivery   Delivery?
+}
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  name      String
+  price     Int
+  qty       Int
+}
+model Delivery {
+  id         String   @id @default(cuid())
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courierId  String
+  courier    User     @relation(fields: [courierId], references: [id])
+  acceptedAt DateTime @default(now())
+}
